@@ -6,14 +6,11 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Třída RestApi představuje REST API aplikace PPF Banka.
  */
 public class RestApi {
-    private static final Logger logger = LoggerFactory.getLogger(RestApi.class);
     private final Vertx vertx;
     private Router restApi;
     private static final String SETUP_ACTION = "setup";
@@ -51,21 +48,6 @@ public class RestApi {
             res.response()
                     .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain; charset="+DEFAULT_CHARSET)
                     .end("PPF Bank vás srdečně vítá!");
-        });
-
-        restApi.get("/bye").handler(res -> {
-
-            res.response()
-                    .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain; charset="+DEFAULT_CHARSET)
-                    .endHandler(v -> vertx.close(ar -> {
-                        if (ar.succeeded()) {
-                            logger.info("PPF Banka se s vámi loučí a přeje vám vše nejlepší!");
-                        } else {
-                            logger.error("Aplikace byla nesprávně ukončena. Chyba: " + ar.cause().getMessage());
-                        }
-                    }))
-                    .end("PPF Banka se s vámi loučí a přeje vám vše nejlepší!");
-
         });
 
         restApi.get("/accounts/:accountId/transactions").handler(res -> {

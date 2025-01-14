@@ -63,13 +63,14 @@ public class DbService {
     public String testDatabase(){
         String result;
         JsonObject dbConfig =  (JsonObject) vertx.sharedData().getLocalMap("app-config").get("dbConfig");
-        try {
-            Connection connection = DriverManager.getConnection(dbConfig.getString("url"), dbConfig.getString("user"), dbConfig.getString("password"));
-            connection.close();
-            result = "Connected to database AJtestPpfDB.";
-
+        try (Connection connection = DriverManager.getConnection(dbConfig.getString("url"), dbConfig.getString("user"), dbConfig.getString("password"))) {
+            if(connection.isValid(5)) {
+                result = "Připojení k databázi je v pořádku.";
+            } else {
+                result = "Připojení k databázi je neplatné.";
+            }
         } catch (SQLException e) {
-            result = "Failed to connect to database AJtestPpfDB. QLException with message: " + e.getMessage();
+            result = "Nepodařilo se připojit k databázi. Chyba: " + e.getMessage();
         }
         return result;
     }
@@ -139,9 +140,9 @@ public class DbService {
                     "IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_transaction_statement') " +
                             "ALTER TABLE [transaction] ADD CONSTRAINT FK_transaction_statement FOREIGN KEY (statement) REFERENCES statement(statementId)");
 
-            result = "Database setup complete.";
+            result = "Nastavení databáze dokončeno.";
         } catch (SQLException e) {
-            result = "Failed to setup database. SQLException with message: " + e.getMessage();
+            result = "Nepodařilo se nastavit databázi. Chyba: " + e.getMessage();
         }
         return result;
     }
@@ -157,9 +158,9 @@ public class DbService {
             connection.createStatement().executeUpdate("DROP TABLE IF EXISTS [transactionType]");
             connection.createStatement().executeUpdate("DROP TABLE IF EXISTS [statement]");
             connection.createStatement().executeUpdate("DROP TABLE IF EXISTS [account]");
-            result = "Database tables dropped successfully.";
+            result = "Tabulky databáze byly úspěšně zrušeny.";
         } catch (SQLException e) {
-            result = "Failed to drop database tables. SQLException with message: " + e.getMessage();
+            result = "Nepodařilo se zrušit tabulky databáze. Chyba: " + e.getMessage();
         }
         return result;
     }
@@ -176,7 +177,7 @@ public class DbService {
         String number = accountJson.getString("number");
         String code = accountJson.getString("code");
         if((name == null || number == null || code == null) || name.isEmpty() || number.isEmpty() || code.isEmpty()) {
-            return "Failed to create account. Fields \"name\", \"number\" and \"code\" are required.";
+            return "Nepodařilo se vytvořit účet. Položky \"name\", \"number\" and \"code\" jsou povinné.";
         }
 
         try (Connection connection = DriverManager.getConnection(dbConfig.getString("url"), dbConfig.getString("user"), dbConfig.getString("password"))) {
@@ -186,10 +187,10 @@ public class DbService {
                 pstmt.setString(2, number);
                 pstmt.setString(3, code);
                 pstmt.executeUpdate();
-                result = "Account created successfully.";
+                result = "Účet byl úspěšně vytvořen.";
             }
         } catch (SQLException e) {
-            result = "Failed to create account. SQLException with message: " + e.getMessage();
+            result = "Nepodařilo se vytvořit účet. Chyba: " + e.getMessage();
         }
         return result;
     }
@@ -208,10 +209,10 @@ public class DbService {
             code = transactionTypeJson.getInteger("code");
         } catch (Exception e) {
             code = 0;
-            logger.error("Failed to parse transaction type code. Exception with message: " + e.getMessage());
+            logger.error("Nepodařilo se zpracovat kód typu transakce. Chyba: " + e.getMessage());
         }
         if(type == null || type.isEmpty()) {
-            return "Failed to create transaction type. Fields \"type\" and \"code\" are required.";
+            return "Nepodařilo se vytvořit typ transakce. Položky \"type\" and \"code\" jsou povinné.";
         }
 
         try (Connection connection = DriverManager.getConnection(dbConfig.getString("url"), dbConfig.getString("user"), dbConfig.getString("password"))) {
@@ -220,10 +221,10 @@ public class DbService {
                 pstmt.setString(1, type);
                 pstmt.setInt(2, code);
                 pstmt.executeUpdate();
-                result = "Transaction type created successfully.";
+                result = "Typ transakce byl úspěšně vytvořen.";
             }
         } catch (SQLException e) {
-            result = "Failed to create transaction type. SQLException with message: " + e.getMessage();
+            result = "Nepodařilo se vytvořit typ transakce. Chyba: " + e.getMessage();
         }
         return result;
     }
@@ -239,7 +240,7 @@ public class DbService {
         try {
             statementJson = new JsonObject(statementData);
         } catch (Exception e) {
-            return "Failed to parse statement data. Exception with message: " + e.getMessage();
+            return "Nepodařilo se zpracovat data výpisu. Chyba: " + e.getMessage();
         }
 
         String number = statementJson.getString("number", "001");
@@ -247,7 +248,7 @@ public class DbService {
         String description = statementJson.getString("description", "");
 
         if (number.isEmpty() || period.isEmpty()) {
-            return "Failed to create statement. Fields \"number\" and \"period\" are required.";
+            return "Nepodařilo se vytvořit výpis. Položky \"number\" and \"period\" jsou povinné.";
         }
 
         try (Connection connection = DriverManager.getConnection(dbConfig.getString("url"), dbConfig.getString("user"), dbConfig.getString("password"))) {
@@ -257,10 +258,10 @@ public class DbService {
                 pstmt.setString(2, period);
                 pstmt.setString(3, description);
                 pstmt.executeUpdate();
-                result = "Statement created successfully.";
+                result = "Výpis byl úspěšně vytvořen.";
             }
         } catch (SQLException e) {
-            result = "Failed to create statement. SQLException with message: " + e.getMessage();
+            result = "Nepodařilo se vytvořit výpis. Chyba: " + e.getMessage();
         }
         return result;
     }
@@ -276,7 +277,7 @@ public class DbService {
         try {
             transactionJson = new JsonObject(transactionData);
         } catch (Exception e) {
-            return "Failed to parse transaction data. Exception with message: " + e.getMessage();
+            return "Nepodařilo se zpracovat data transakce. Chyba " + e.getMessage();
         }
 
         BigDecimal amount;
@@ -285,7 +286,7 @@ public class DbService {
             amount = new BigDecimal(amountStr);
         } catch (Exception e) {
             amount = BigDecimal.ZERO;
-            logger.error("Failed to parse amount. Exception with message: " + e.getMessage());
+            logger.error("Nepodařilo se zpracovat \"amount\". Chyba: " + e.getMessage());
         }
 
         String currency = transactionJson.getString("currency", "CZK");
@@ -295,7 +296,7 @@ public class DbService {
             bookingDate = java.sql.Date.valueOf(transactionJson.getString("bookingDate"));
         } catch (Exception e) {
             bookingDate = null;
-            logger.error("Failed to parse bookingDate. Exception with message: " + e.getMessage());
+            logger.error("Nepodařilo se zpracovat \"bookingDate\". Chyba: " + e.getMessage());
         }
 
         Long counterPartyAccount;
@@ -303,7 +304,7 @@ public class DbService {
             counterPartyAccount = transactionJson.getLong("counterPartyAccount");
         } catch (Exception e) {
             counterPartyAccount = 0L;
-            logger.error("Failed to parse counterPartyAccount. Exception with message: " + e.getMessage());
+            logger.error("Nepodařilo se zpracovat \"counterPartyAccount\". Chyba: " + e.getMessage());
         }
 
         String creditDebitIndicator = transactionJson.getString("creditDebitIndicator");
@@ -315,7 +316,7 @@ public class DbService {
             postingDate = java.sql.Date.valueOf(transactionJson.getString("postingDate"));
         } catch (Exception e) {
             postingDate = null;
-            logger.error("Failed to parse postingDate. Exception with message: " + e.getMessage());
+            logger.error("Nepodařilo se zpracovat \"postingDate\". Chyba: " + e.getMessage());
         }
 
         String productBankRef = transactionJson.getString("productBankRef");
@@ -325,7 +326,7 @@ public class DbService {
             statement = transactionJson.getLong("statement");
         } catch (Exception e) {
             statement = 0L;
-            logger.error("Failed to parse statement. Exception with message: " + e.getMessage());
+            logger.error("Nepodařilo se zpracovat \"statement\". Chyba: " + e.getMessage());
         }
 
         String transactionId = transactionJson.getString("transactionId");
@@ -334,7 +335,7 @@ public class DbService {
             transactionType = transactionJson.getLong("transactionType");
         } catch (Exception e) {
             transactionType = 0L;
-            logger.error("Failed to parse transactionType. Exception with message: " + e.getMessage());
+            logger.error("Nepodařilo se zpracovat \"transactionType\". Chyba: " + e.getMessage());
         }
 
         String variableSymbol = transactionJson.getString("variableSymbol");
@@ -367,10 +368,10 @@ public class DbService {
                 pstmt.setLong(15, transactionType);
                 pstmt.setString(16, variableSymbol);
                 pstmt.executeUpdate();
-                result = "Transaction created successfully.";
+                result = "Transakce byla úspěšně vytvořena.";
             }
         } catch (SQLException e) {
-            result = "Failed to create transaction. SQLException with message: " + e.getMessage();
+            result = "Nepodařilo se vytvořit transakci. Chyba: " + e.getMessage();
         }
         return result;
     }
