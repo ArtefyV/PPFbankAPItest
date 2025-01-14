@@ -20,7 +20,7 @@ Hlavním úkolem této aplikace je demonstrovat možnost získání reportu o tr
 
 *Další funkce.*
 
-Tento projekt poskytuje možnost vytváření nových zápisů v tabulkách účtů, výpisů, typů transakcí a samotných transakcí. 
+Aplikace také umožňuje vytvářet nové zápisy v tabulkách účtů, výpisů, typů transakcí a samotných transakcí. 
 Koncové body vytvořené pro tento účel jsou:
 1) pro vytváření účtů - POST /accounts/create
 2) pro vytváření výpisů - POST /statements/create
