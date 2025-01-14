@@ -1,0 +1,2 @@
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_transaction_counterPartyAccount')
+ALTER TABLE [transaction] ADD CONSTRAINT FK_transaction_counterPartyAccount FOREIGN KEY (counterPartyAccount) REFERENCES account(accountId)

@@ -17,7 +17,6 @@ public class RestApi {
     private static final String FILL_ACTION = "fill";
     private static final String TEST_ACTION = "test";
     private static final String DEFAULT_CHARSET = "UTF-8";
-
     private static final String BODY_MISSING = "Chybí tělo požadavku";
 
     /**

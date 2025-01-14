@@ -43,16 +43,20 @@ public class DbService {
 
     /**
      * Metoda pro čtení zdroje z classpath.
-     * @param resource URL zdroje
+     * @param resourceName - název zdroje
      * @return obsah zdroje
+     * @throws IOException - chyba při čtení zdroje
      */
-    public String readResourceStr(URL resource) {
+    public String readResourceStr(String resourceName) throws IOException{
+        URL resource = getClass().getClassLoader().getResource(resourceName);
+        if(resource == null) {
+            throw new IOException(String.format("Zdroj \"%s\" nebyl nalezen.", resourceName));
+        }
         try (InputStream inputStream = resource.openStream();
              Scanner scanner = new Scanner(inputStream, StandardCharsets.UTF_8)) {
             return scanner.useDelimiter("\\A").next();
         } catch (IOException e) {
-            logger.error("Nepodařilo se načíst soubor. Chyba: " + e.getMessage());
-            return null;
+            throw new IOException(String.format("Nepodařilo se načíst soubor \"%s\". Chyba: %s", resourceName, e.getMessage()));
         }
     }
 
@@ -82,66 +86,16 @@ public class DbService {
     public String setupDatabase() {
         String result;
         try (Connection connection = DriverManager.getConnection(dbConfig.getString("url"), dbConfig.getString("user"), dbConfig.getString("password"))) {
-            connection.createStatement().executeUpdate(
-                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'transaction') " +
-                            "CREATE TABLE [transaction](" +
-                            "[trxId] BIGINT IDENTITY(1000,1) NOT NULL," +
-                            "[amount] NUMERIC(19, 2) NOT NULL," +
-                            "[currency] NVARCHAR(3) NOT NULL," +
-                            "[id] NVARCHAR(20) NOT NULL," +
-                            "[bankref] NVARCHAR(20) NOT NULL," +
-                            "[transactionId] NVARCHAR(20) NOT NULL," +
-                            "[bookingDate] DATE NULL," +
-                            "[postingDate] DATE NOT NULL," +
-                            "[creditDebitIndicator] VARCHAR(4) NULL," +
-                            "[ownAccountNumber] NVARCHAR(20) NULL," +
-                            "[counterPartyAccount] BIGINT NOT NULL," +
-                            "[detail1] NVARCHAR(50) NULL," +
-                            "[detail2] NVARCHAR(50) NULL," +
-                            "[detail3] NVARCHAR(50) NULL," +
-                            "[detail4] NVARCHAR(50) NULL," +
-                            "[productBankRef] NVARCHAR(50) NULL," +
-                            "[transactionType] BIGINT NOT NULL," +
-                            "[statement] BIGINT NOT NULL," +
-                            "[constantSymbol] VARCHAR(10) NULL," +
-                            "[specificSymbol] VARCHAR(10) NULL," +
-                            "[variableSymbol] VARCHAR(10) NULL," +
-                            "CONSTRAINT PK_transaction_trxId PRIMARY KEY (trxId))");
-            connection.createStatement().executeUpdate(
-                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'transactionType') " +
-                            "CREATE TABLE [transactionType](" +
-                            "[trxTypeId] BIGINT IDENTITY(1000,1) NOT NULL," +
-                            "[type] NVARCHAR(20) NOT NULL," +
-                            "[code] INT NOT NULL," +
-                            "CONSTRAINT PK_transactionType_trxTypeId PRIMARY KEY (trxTypeId))");
-            connection.createStatement().executeUpdate(
-                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'statement') " +
-                            "CREATE TABLE [statement](" +
-                            "[statementId] BIGINT IDENTITY(1000,1) NOT NULL," +
-                            "[number] NVARCHAR(20) NOT NULL," +
-                            "[period] NVARCHAR(20) NOT NULL," +
-                            "[description] NVARCHAR(1000) NULL," +
-                            "CONSTRAINT PK_statement_statementId PRIMARY KEY (statementId))");
-            connection.createStatement().executeUpdate(
-                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'account') " +
-                            "CREATE TABLE [account](" +
-                            "[accountId] BIGINT IDENTITY(1000,1) NOT NULL," +
-                            "[name] NVARCHAR(50) NOT NULL," +
-                            "[number] NVARCHAR(20) NOT NULL," +
-                            "[code] NVARCHAR(4) NOT NULL," +
-                            "CONSTRAINT PK_account_accountId PRIMARY KEY (accountId))");
-            connection.createStatement().executeUpdate(
-                    "IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_transaction_counterPartyAccount') " +
-                            "ALTER TABLE [transaction] ADD CONSTRAINT FK_transaction_counterPartyAccount FOREIGN KEY (counterPartyAccount) REFERENCES account(accountId)");
-            connection.createStatement().executeUpdate(
-                    "IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_transaction_transactionType') " +
-                            "ALTER TABLE [transaction] ADD CONSTRAINT FK_transaction_transactionType FOREIGN KEY (transactionType) REFERENCES transactionType(trxTypeId)");
-            connection.createStatement().executeUpdate(
-                    "IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_transaction_statement') " +
-                            "ALTER TABLE [transaction] ADD CONSTRAINT FK_transaction_statement FOREIGN KEY (statement) REFERENCES statement(statementId)");
+            connection.createStatement().executeUpdate(readResourceStr("create_transaction.sql"));
+            connection.createStatement().executeUpdate(readResourceStr("create_transactionType.sql"));
+            connection.createStatement().executeUpdate(readResourceStr("create_statement.sql"));
+            connection.createStatement().executeUpdate(readResourceStr("create_account.sql"));
+            connection.createStatement().executeUpdate(readResourceStr("fk_transaction_counterPartyAccount.sql"));
+            connection.createStatement().executeUpdate(readResourceStr("fk_transaction_transactionType.sql"));
+            connection.createStatement().executeUpdate(readResourceStr("fk_transaction_statement.sql"));
 
             result = "Nastavení databáze dokončeno.";
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             result = "Nepodařilo se nastavit databázi. Chyba: " + e.getMessage();
         }
         return result;
@@ -381,40 +335,26 @@ public class DbService {
      * @return výsledek naplnění databáze
      */
     public String fillUpDatabase() {
-        String resourceName, result = "";
+        String result = "";
         String errorMsgBase = "Nepodařilo se vyplnit databázi.";
-        String errorExpMsg = "Zdroj \"%s\" nebyl nalezen.";
-        URL resource;
 
         try {
-            resourceName = "accounts.json";
-            resource = getClass().getClassLoader().getResource(resourceName);
-            if(resource == null) return String.format(errorMsgBase+" "+errorExpMsg, resourceName);
-            JsonArray accountsArray = new JsonArray(readResourceStr(resource));
+            JsonArray accountsArray = new JsonArray(readResourceStr("accounts.json"));
             for (int i = 0; i < accountsArray.size(); i++) {
                 result += createAccount(accountsArray.getJsonObject(i).encode()) + "\n";
             }
 
-            resourceName = "statements.json";
-            resource = getClass().getClassLoader().getResource(resourceName);
-            if(resource == null) return String.format(errorMsgBase+" "+errorExpMsg, resourceName);
-            JsonArray statementsArray = new JsonArray(readResourceStr(resource));
+            JsonArray statementsArray = new JsonArray(readResourceStr("statements.json"));
             for (int i = 0; i < statementsArray.size(); i++) {
                 result += createStatement(statementsArray.getJsonObject(i).encode()) + "\n";
             }
 
-            resourceName = "transactionTypes.json";
-            resource = getClass().getClassLoader().getResource(resourceName);
-            if(resource == null) return String.format(errorMsgBase+" "+errorExpMsg, resourceName);
-            JsonArray transactionTypesArray = new JsonArray(readResourceStr(resource));
+            JsonArray transactionTypesArray = new JsonArray(readResourceStr("transactionTypes.json"));
             for (int i = 0; i < transactionTypesArray.size(); i++) {
                 result += createTransactionType(transactionTypesArray.getJsonObject(i).encode()) + "\n";
             }
 
-            resourceName = "transactions.json";
-            resource = getClass().getClassLoader().getResource(resourceName);
-            if(resource == null) return String.format(errorMsgBase+" "+errorExpMsg, resourceName);
-            JsonArray transactionsArray = new JsonArray(readResourceStr(resource));
+            JsonArray transactionsArray = new JsonArray(readResourceStr("transactions.json"));
             for (int i = 0; i < transactionsArray.size(); i++) {
                 result += createTransaction(transactionsArray.getJsonObject(i).encode()) + "\n";
             }
@@ -435,17 +375,9 @@ public class DbService {
      */
     public String getTransactionsByAccountNumber(String accountNumber) {
         JsonArray transactionsArray = new JsonArray();
-        String sql = "SELECT t.*, a.name AS counterPartyAccountName, a.number AS counterPartyAccountNumber, a.code AS counterPartyAccountCode, " +
-                "s.number AS statementNumber, s.period AS statementPeriod, " +
-                "tt.type AS transactionTypeStr, tt.code AS transactionTypeCode " +
-                "FROM [transaction] t " +
-                "JOIN [account] a ON t.counterPartyAccount = a.accountId " +
-                "JOIN [statement] s ON t.statement = s.statementId " +
-                "JOIN [transactionType] tt ON t.transactionType = tt.trxTypeId " +
-                "WHERE t.ownAccountNumber = ?";
 
         try (Connection connection = DriverManager.getConnection(dbConfig.getString("url"), dbConfig.getString("user"), dbConfig.getString("password"));
-             PreparedStatement pstmt = connection.prepareStatement(sql)) {
+             PreparedStatement pstmt = connection.prepareStatement(readResourceStr("select_transactions.sql"))) {
             pstmt.setString(1, accountNumber);
             ResultSet rs = pstmt.executeQuery();
 
@@ -489,7 +421,7 @@ public class DbService {
                 transactionsArray.add(transactionJson);
             }
             return transactionsArray.encodePrettily();
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             JsonObject errorJson = new JsonObject();
             errorJson.put("error", "Nepodařilo se vyhledat transakce podle čísla účtu.");
             errorJson.put("message", e.getMessage());

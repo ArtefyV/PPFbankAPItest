@@ -9,6 +9,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import com.mytest.db.DbService;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -27,8 +28,10 @@ public class DbServiceTest {
 
     @Test
     void testReadResource(VertxTestContext testContext) {
-        String result = dbService.readResourceStr(getClass().getClassLoader().getResource("mocktext.txt"));
-        assertTrue(result.contains("This is just a test. =)"));
+        assertDoesNotThrow(() -> {
+            String result = dbService.readResourceStr("mocktext.txt");
+            assertTrue(result.contains("This is just a test. ="));
+        });
         testContext.completeNow();
     }
 }

@@ -1,0 +1,2 @@
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_transaction_statement')
+ALTER TABLE [transaction] ADD CONSTRAINT FK_transaction_statement FOREIGN KEY (statement) REFERENCES statement(statementId)
