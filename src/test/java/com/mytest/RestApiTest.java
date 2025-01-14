@@ -22,8 +22,7 @@ public class RestApiTest {
 
     @BeforeAll
     void setUp(Vertx vertx, VertxTestContext testContext) {
-        RestApi restApi = new RestApi(vertx);
-        Router router = restApi.createRouter().build();
+        Router router = new RestApi(vertx).createRouter();
         vertx.createHttpServer().requestHandler(router).listen(8080, testContext.succeeding(id -> testContext.completeNow()));
     }
 

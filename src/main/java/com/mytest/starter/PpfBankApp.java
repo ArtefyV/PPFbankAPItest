@@ -45,7 +45,7 @@ public class PpfBankApp extends AbstractVerticle {
 
                 int localServerPort = httpConfig.getInteger("port", 8080);
 
-                Router router = new RestApi(vertx).createRouter().build();
+                Router router = new RestApi(vertx).createRouter();
 
                 vertx.createHttpServer().requestHandler(router).listen(localServerPort, http -> {
                     if (http.succeeded()) {

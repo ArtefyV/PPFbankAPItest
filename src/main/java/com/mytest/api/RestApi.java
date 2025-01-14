@@ -12,7 +12,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  */
 public class RestApi {
     private final Vertx vertx;
-    private Router restApi;
     private static final String SETUP_ACTION = "setup";
     private static final String DROP_ACTION = "drop";
     private static final String FILL_ACTION = "fill";
@@ -30,27 +29,19 @@ public class RestApi {
     }
 
     /**
-     * Metoda získání hotového routeru.
-     * @return router
-     */
-    public Router build() {
-        return restApi;
-    }
-
-    /**
      * Metoda pro vytvoření routeru a definici jednotlivých cest.
      * @return instance třídy RestApi
      */
-    public RestApi createRouter() {
-        restApi = Router.router(vertx);
+    public Router createRouter() {
+        Router router = Router.router(vertx);
 
-        restApi.get("/hi").handler(res -> {
+        router.get("/hi").handler(res -> {
             res.response()
                     .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain; charset="+DEFAULT_CHARSET)
                     .end("PPF Bank vás srdečně vítá!");
         });
 
-        restApi.get("/accounts/:accountId/transactions").handler(res -> {
+        router.get("/accounts/:accountId/transactions").handler(res -> {
             String accountId = res.request().getParam("accountId");
             if(accountId == null) {
                 res.response()
@@ -69,9 +60,9 @@ public class RestApi {
 
         });
 
-        restApi.route().handler(BodyHandler.create());
+        router.route().handler(BodyHandler.create());
 
-        restApi.post("/db").handler(res -> {
+        router.post("/db").handler(res -> {
             String actionResult = "";
             JsonObject body = res.body().asJsonObject();
             if(body == null) {
@@ -121,7 +112,7 @@ public class RestApi {
                     .end(String.format("Akce \"%s\" dokončena s výsledkem: %s", action, actionResult));
         });
 
-        restApi.post("/accounts/create").handler(res -> {
+        router.post("/accounts/create").handler(res -> {
             String actionResult;
             String body = res.body().asString();
             if(body == null) {
@@ -139,7 +130,7 @@ public class RestApi {
                     .end(actionResult);
         });
 
-        restApi.post("/statements/create").handler(res -> {
+        router.post("/statements/create").handler(res -> {
             String actionResult;
             String body = res.body().asString();
             if(body == null) {
@@ -157,7 +148,7 @@ public class RestApi {
                     .end(actionResult);
         });
 
-        restApi.post("/transactions/type/create").handler(res -> {
+        router.post("/transactions/type/create").handler(res -> {
             String actionResult;
             String body = res.body().asString();
             if(body == null) {
@@ -175,7 +166,7 @@ public class RestApi {
                     .end(actionResult);
         });
 
-        restApi.post("/transactions/create").handler(res -> {
+        router.post("/transactions/create").handler(res -> {
             String actionResult;
             String body = res.body().asString();
             if(body == null) {
@@ -193,6 +184,6 @@ public class RestApi {
                     .end(actionResult);
         });
 
-        return this;
+        return router;
     }
 }
