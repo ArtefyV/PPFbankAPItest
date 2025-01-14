@@ -1,0 +1,14 @@
+{
+  "db": {
+    "url": "jdbc:sqlserver://localhost:1433;databaseName=AJtestPpfDB;encrypt=false",
+    "user": "sa",
+    "password": "pw$123",
+    "driver_class": "com.microsoft.sqlserver.jdbc.SQLServerDriver",
+    "max_pool_size": 10,
+    "connection_timeout": 30000,
+    "idle_timeout": 600000
+  },
+  "http": {
+    "port": 8080
+  }
+}
