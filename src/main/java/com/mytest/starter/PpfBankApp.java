@@ -2,6 +2,7 @@ package com.mytest.starter;
 
 import com.mytest.api.RestApi;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Promise;
 import io.vertx.ext.web.Router;
 import io.vertx.core.json.JsonObject;
 import io.vertx.config.ConfigRetriever;
@@ -26,6 +27,7 @@ public class PpfBankApp extends AbstractVerticle {
      */
     @Override
     public void start() throws Exception {
+        Promise<Void> configPromise = Promise.promise();
 
         ConfigStoreOptions fileStore = new ConfigStoreOptions()
                 .setType("file")
@@ -37,14 +39,19 @@ public class PpfBankApp extends AbstractVerticle {
         retriever.getConfig(ar -> {
             if (ar.succeeded()) {
                 JsonObject config = ar.result();
-                JsonObject dbConfig = config.getJsonObject("db");
-                vertx.sharedData().getLocalMap("app-config").put("dbConfig", dbConfig);
-
-                JsonObject httpConfig = config.getJsonObject("http");
+                vertx.sharedData().getLocalMap("app-config").put("dbConfig", config.getJsonObject("db"));
+                vertx.sharedData().getLocalMap("app-config").put("httpConfig", config.getJsonObject("http"));
                 logger.info("Konfigurace byla úspěšně načtena");
-
+                configPromise.complete();
+            } else {
+                logger.error("Nepodařilo se načíst konfiguraci. Chyba: " + ar.cause().getMessage());
+                configPromise.fail(ar.cause());
+            }
+        });
+        configPromise.future().onComplete(ar -> {
+            if (ar.succeeded()) {
+                JsonObject httpConfig = (JsonObject) vertx.sharedData().getLocalMap("app-config").get("httpConfig");
                 int localServerPort = httpConfig.getInteger("port", 8080);
-
                 Router router = new RestApi(vertx).createRouter();
 
                 vertx.createHttpServer().requestHandler(router).listen(localServerPort, http -> {
@@ -55,7 +62,7 @@ public class PpfBankApp extends AbstractVerticle {
                     }
                 });
             } else {
-                logger.error("Nepodařilo se načíst konfiguraci. Chyba: " + ar.cause().getMessage());
+                logger.error("Konfigurace nebyla správně uložena, server HTTP nebude spuštěn.");
             }
         });
     }
