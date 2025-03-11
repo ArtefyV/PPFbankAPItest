@@ -31,5 +31,5 @@ Jako tělo requestu se používá JSON, kde jsou popsána všechna políčka pot
 
 *Poznámky k implementaci projektu.*
 
-Projekt je založen na frameworku Vert.X, aby se zjednodušilo vytváření serveru HTTP a konfigurace rozhraní API. Funkce Vert.X jsou zde však použity pouze v omezené míře. Metody práce s databází využívají v podstatě „tradiční“ prostředky knihovny java.sql a podobně.
+Projekt je založen na frameworku Vert.X, aby se zjednodušilo vytváření serveru HTTP a konfigurace rozhraní API. Funkce Vert.X jsou zde však použity pouze v omezené míře. Databázové metody využívají pro připojení především „tradiční“ prostředky knihovny java.sql a ovladače JDBC.
 Kód projektu obsahuje stručné popisy tříd a metod pro usnadnění analýzy kódu. Je také třeba vzít v úvahu, že tento projekt není prototypem žádného komerčního produktu, a proto je v něm řada řešení zjednodušena. Výsledkem je aplikace, která je schopna demonstrovat základní funkce, ale není připravena pro nasazení v reálném prostředí.
